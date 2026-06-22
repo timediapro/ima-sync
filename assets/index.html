@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ima 知识库同步工具</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    color: #2C2C2A;
+    background: #F8F7F4;
+    min-height: 100vh;
+  }
+  .app {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .logo {
+    width: 36px; height: 36px;
+    background: #534AB7; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px; font-weight: 500; flex-shrink: 0;
+  }
+  .header h1 { font-size: 18px; font-weight: 500; color: #2C2C2A; }
+  .header p { font-size: 12px; color: #888780; margin-top: 2px; }
+
+  .card {
+    background: #fff; border-radius: 12px;
+    border: 0.5px solid rgba(0,0,0,0.12);
+    padding: 1.25rem; margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 500; color: #444441;
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .step-badge {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #EEEDFE; color: #534AB7;
+    font-size: 11px; font-weight: 500;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-badge.done { background: #E1F5EE; color: #0F6E56; }
+
+  .field-row { display: flex; gap: 8px; align-items: center; }
+  .field-row input, .field-row select {
+    flex: 1; height: 34px; padding: 0 10px;
+    border: 0.5px solid rgba(0,0,0,0.2); border-radius: 8px;
+    font-size: 13px; background: #fff; color: #2C2C2A; outline: none;
+  }
+  .field-row input:focus, .field-row select:focus { border-color: #534AB7; }
+  button {
+    height: 34px; padding: 0 14px;
+    border: 0.5px solid rgba(0,0,0,0.2); border-radius: 8px;
+    font-size: 13px; background: #fff; color: #2C2C2A;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: #F1EFE8; border-color: rgba(0,0,0,0.3); }
+  button.primary { background: #534AB7; color: #fff; border-color: #534AB7; }
+  button.primary:hover { background: #3C3489; border-color: #3C3489; }
+  button.secondary { background: #E1F5EE; color: #0F6E56; border-color: #B4B2A9; }
+  button.secondary:hover { background: #9FE1CB; }
+  button.danger { background: #fff; color: #A32D2D; border-color: #F09595; }
+  button.danger:hover { background: #FCEBEB; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 500;
+  }
+  .tag-new { background: #E1F5EE; color: #0F6E56; }
+  .tag-missing { background: #FAEEDA; color: #854F0B; }
+  .tag-modified { background: #E6F1FB; color: #185FA5; }
+  .tag-same { background: #F1EFE8; color: #5F5E5A; }
+  .tag-uploading { background: #EEEDFE; color: #534AB7; }
+  .tag-done { background: #E1F5EE; color: #0F6E56; }
+  .tag-error { background: #FCEBEB; color: #A32D2D; }
+  .tag-warn { background: #FAEEDA; color: #854F0B; }
+
+  .auth-tabs {
+    display: flex; gap: 0; margin-bottom: 12px;
+    border-bottom: 0.5px solid rgba(0,0,0,0.12);
+  }
+  .auth-tab {
+    padding: 6px 14px; font-size: 12px; cursor: pointer;
+    border: none; background: none; color: #888780;
+    border-bottom: 2px solid transparent;
+  }
+  .auth-tab.active { color: #534AB7; border-bottom-color: #534AB7; font-weight: 500; }
+
+  .auth-panel { display: none; }
+  .auth-panel.active { display: block; }
+
+  .token-row { display: flex; gap: 8px; align-items: center; }
+  .token-input {
+    flex: 1; height: 34px; padding: 0 10px;
+    border: 0.5px solid rgba(0,0,0,0.2); border-radius: 8px;
+    font-size: 13px; font-family: monospace;
+    background: #fff; color: #2C2C2A; outline: none;
+  }
+  .token-input:focus { border-color: #534AB7; }
+  .hint {
+    font-size: 12px; color: #888780; margin-top: 6px; line-height: 1.5;
+  }
+  .hint a { color: #534AB7; text-decoration: none; }
+  .hint a:hover { text-decoration: underline; }
+  .hint .recommend {
+    background: #E1F5EE; color: #0F6E56; padding: 2px 6px;
+    border-radius: 4px; font-size: 11px; font-weight: 500;
+  }
+
+  .preflight-warn {
+    margin-top: 8px; padding: 8px 10px; border-radius: 8px;
+    background: #FAEEDA; border-left: 3px solid #BA7517;
+    font-size: 12px; color: #854F0B; line-height: 1.5;
+  }
+
+  .dir-info {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; background: #F8F7F4; border-radius: 8px;
+    font-size: 12px; color: #5F5E5A; margin-top: 8px;
+  }
+  .dir-icon { color: #534AB7; font-size: 16px; }
+
+  .diff-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .diff-table th {
+    text-align: left; padding: 6px 8px; font-weight: 500; color: #888780;
+    border-bottom: 0.5px solid rgba(0,0,0,0.1); font-size: 11px;
+  }
+  .diff-table td {
+    padding: 7px 8px; border-bottom: 0.5px solid rgba(0,0,0,0.06);
+    vertical-align: middle;
+  }
+  .diff-table tr:last-child td { border-bottom: none; }
+  .diff-table tr:hover td { background: #F8F7F4; }
+  .filename { font-weight: 500; color: #2C2C2A; }
+  .filesize { color: #888780; }
+  .filetime { color: #888780; font-size: 11px; }
+
+  .action-bar {
+    display: flex; gap: 8px; align-items: center;
+    margin-top: 12px; flex-wrap: wrap;
+  }
+  .action-bar .spacer { flex: 1; }
+  .summary-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .log-box {
+    background: #1a1a1a; border-radius: 8px; padding: 12px;
+    font-family: monospace; font-size: 12px; color: #aaa;
+    max-height: 200px; overflow-y: auto; margin-top: 10px;
+  }
+  .log-box .log-ok { color: #5DCAA5; }
+  .log-box .log-err { color: #F09595; }
+  .log-box .log-info { color: #85B7EB; }
+  .log-box .log-warn { color: #FAC775; }
+
+  .empty-state { text-align: center; padding: 2rem; color: #888780; }
+  .progress-bar-wrap {
+    background: #F1EFE8; border-radius: 4px; height: 6px;
+    overflow: hidden; margin-top: 8px;
+  }
+  .progress-bar {
+    height: 6px; background: #534AB7; border-radius: 4px;
+    transition: width 0.3s;
+  }
+
+  .select-check { cursor: pointer; }
+  #kb-select { max-width: 300px; }
+
+  .section-divider { border: none; border-top: 0.5px solid rgba(0,0,0,0.08); margin: 1rem 0; }
+
+  .meta-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 8px; }
+  .meta-item { font-size: 12px; color: #888780; }
+  .meta-item strong { color: #444441; }
+
+  .quick-actions {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 浏览器兼容性提示 -->
+  <div id="compat-warning" class="card" style="display:none;border-left:3px solid #A32D2D;background:#FCEBEB">
+    <div class="card-title" style="color:#A32D2D">&#9888; 浏览器不兼容</div>
+    <p style="font-size:13px;color:#A32D2D;line-height:1.6">
+      此工具需要 <strong>Chrome 127+</strong> 或 <strong>Edge 127+</strong> 浏览器（File System Access API 支持）。<br>
+      您当前使用的浏览器不支持选择本地目录功能。<br>
+      请更换浏览器，或使用 <strong>Python CLI</strong> 方式同步：<br>
+      <code style="background:#fff;padding:2px 6px;border-radius:4px;font-size:12px">python ima_sync_report.py --local "路径" --kb ID</code>
+    </p>
+  </div>
+  <div class="header">
+    <div class="logo">i</div>
+    <div>
+      <h1>ima 知识库同步工具 v2.0.1</h1>
+      <p>对比本地目录与 ima 知识库，支持双向同步</p>
+    </div>
+  </div>
+
+  <!-- Step 1: Authentication (双模式) -->
+  <div class="card" id="card-token">
+    <div class="card-title">
+      <span class="step-badge" id="badge-1">1</span>
+      配置认证
+      <span class="tag tag-new" style="font-size:10px;margin-left:4px">v2.0 新增 OpenAPI</span>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuth('openapi')" id="tab-openapi">
+        OpenAPI <span style="font-size:10px;color:#0F6E56">推荐</span>
+      </button>
+      <button class="auth-tab" onclick="switchAuth('bearer')" id="tab-bearer">
+        Bearer Token <span style="font-size:10px;color:#888780">备选</span>
+      </button>
+    </div>
+
+    <!-- OpenAPI Panel -->
+    <div class="auth-panel active" id="panel-openapi">
+      <div class="field-row" style="margin-bottom: 8px">
+        <input type="text" id="client-id-input" placeholder="Client ID（从 ima.qq.com/agent-interface 获取）">
+      </div>
+      <div class="field-row">
+        <input type="password" id="api-key-input" placeholder="API Key">
+        <button onclick="saveOpenAPI()">保存</button>
+        <button onclick="toggleVis('api-key-input')" id="btn-toggle-vis-oapi">显示</button>
+      </div>
+      <div class="hint">
+        <span class="recommend">推荐方式</span>
+        访问 <a href="https://ima.qq.com/agent-interface" target="_blank">ima.qq.com/agent-interface</a> 获取 Client ID 和 API Key。
+        更稳定、更易获取，无需从浏览器开发者工具抓取。
+      </div>
+    </div>
+
+    <!-- Bearer Token Panel -->
+    <div class="auth-panel" id="panel-bearer">
+      <div class="token-row">
+        <input type="password" class="token-input" id="token-input" placeholder="粘贴你的 ima Bearer Token...">
+        <button onclick="saveBearerToken()">保存</button>
+        <button onclick="toggleVis('token-input')" id="btn-toggle-vis">显示</button>
+      </div>
+      <div class="hint">
+        备选方式：打开 <a href="https://ima.qq.com" target="_blank">ima.qq.com</a> → F12 → Network → 找 API 请求 → 复制 Authorization Bearer xxx 中的 xxx。
+        Token 可能定期过期，建议优先使用 OpenAPI 方式。
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Select KB -->
+  <div class="card" id="card-kb">
+    <div class="card-title">
+      <span class="step-badge" id="badge-2">2</span>
+      选择知识库
+    </div>
+    <div class="field-row">
+      <select id="kb-select" onchange="onKbChange()">
+        <option value="">-- 先配置认证后加载 --</option>
+      </select>
+      <button onclick="loadKbList()" id="btn-load-kb">加载知识库</button>
+    </div>
+    <div id="kb-meta" class="meta-row"></div>
+  </div>
+
+  <!-- Step 3: Select Local Dir -->
+  <div class="card" id="card-dir">
+    <div class="card-title">
+      <span class="step-badge" id="badge-3">3</span>
+      选择本地目录
+    </div>
+    <div class="field-row">
+      <button onclick="selectLocalDir()" id="btn-select-dir">选择目录</button>
+      <button onclick="runDiff()" id="btn-diff" disabled class="primary">开始对比</button>
+    </div>
+    <div id="preflight-warn-box" class="preflight-warn" style="display:none"></div>
+    <div id="dir-info" style="display:none" class="dir-info">
+      <span class="dir-icon">&#128193;</span>
+      <span id="dir-name-display"></span>
+      <span id="dir-file-count" style="margin-left:auto; color:#888780"></span>
+    </div>
+  </div>
+
+  <!-- Step 4: Diff Result -->
+  <div class="card" id="card-diff" style="display:none">
+    <div class="card-title">
+      <span class="step-badge" id="badge-4">4</span>
+      差异对比结果
+      <span id="auth-mode-label" style="font-size:11px;color:#888780;margin-left:auto"></span>
+    </div>
+    <div id="diff-summary" class="summary-chips"></div>
+    <div class="progress-bar-wrap" id="diff-progress-wrap" style="display:none">
+      <div class="progress-bar" id="diff-progress-bar" style="width:0%"></div>
+    </div>
+
+    <!-- 快捷操作 -->
+    <div class="quick-actions" id="quick-actions" style="display:none">
+      <button onclick="selectAllNew()" class="secondary">选中所有新文件</button>
+      <button onclick="selectAllModified()" class="secondary">选中所有变更文件</button>
+      <button onclick="selectNone()">取消全选</button>
+    </div>
+
+    <hr class="section-divider">
+
+    <table class="diff-table" id="diff-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="check-all" onchange="toggleAll()"></th>
+          <th>文件名</th>
+          <th>类型</th>
+          <th>大小</th>
+          <th>ima 更新时间</th>
+          <th>状态</th>
+          <th>预检</th>
+          <th>操作状态</th>
+        </tr>
+      </thead>
+      <tbody id="diff-tbody"></tbody>
+    </table>
+
+    <div id="diff-empty" class="empty-state" style="display:none">
+      <div style="font-size:32px;margin-bottom:8px">&#10003;</div>
+      <div>本地与 ima 完全一致，无需同步</div>
+    </div>
+
+    <div class="action-bar">
+      <button onclick="downloadSelected()" id="btn-download">&#8595; 下载选中到本地</button>
+      <button onclick="uploadSelected()" id="btn-upload" class="primary">&#8593; 上传选中到 ima</button>
+      <button onclick="uploadAllNew()" id="btn-upload-all" class="secondary">&#8593;&#8593; 一键上传所有新文件</button>
+      <div class="spacer"></div>
+      <button onclick="runDiff()">刷新对比</button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card" id="card-log" style="display:none">
+    <div class="card-title">运行日志</div>
+    <div class="log-box" id="log-box"></div>
+  </div>
+</div>
+
+<script>
+const IMA_BACKEND_BASE = 'https://ima.qq.com/backend/api/v1';
+const IMA_OPENAPI_BASE = 'https://ima.qq.com/openapi/wiki/v1';
+
+// 文件预检映射（与 ima API 文档一致）
+const PREFLIGHT_MAP = {
+  '.pdf':      { media_type: 1,  content_type: 'application/pdf',                                                                       label: 'PDF',      maxMB: 200 },
+  '.doc':      { media_type: 3,  content_type: 'application/msword',                                                                   label: 'Word',     maxMB: 200 },
+  '.docx':     { media_type: 3,  content_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',              label: 'Word',     maxMB: 200 },
+  '.ppt':      { media_type: 4,  content_type: 'application/vnd.ms-powerpoint',                                                        label: 'PPT',      maxMB: 200 },
+  '.pptx':     { media_type: 4,  content_type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',             label: 'PPT',      maxMB: 200 },
+  '.xls':      { media_type: 5,  content_type: 'application/vnd.ms-excel',                                                             label: 'Excel',    maxMB: 10 },
+  '.xlsx':     { media_type: 5,  content_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',                     label: 'Excel',    maxMB: 10 },
+  '.csv':      { media_type: 5,  content_type: 'text/csv',                                                                             label: 'CSV',      maxMB: 10 },
+  '.md':       { media_type: 7,  content_type: 'text/markdown',                                                                        label: 'Markdown', maxMB: 10 },
+  '.markdown': { media_type: 7,  content_type: 'text/markdown',                                                                        label: 'Markdown', maxMB: 10 },
+  '.txt':      { media_type: 13, content_type: 'text/plain',                                                                           label: 'TXT',      maxMB: 10 },
+  '.png':      { media_type: 9,  content_type: 'image/png',                                                                            label: 'PNG',      maxMB: 30 },
+  '.jpg':      { media_type: 9,  content_type: 'image/jpeg',                                                                           label: 'JPG',      maxMB: 30 },
+  '.jpeg':     { media_type: 9,  content_type: 'image/jpeg',                                                                           label: 'JPEG',     maxMB: 30 },
+  '.webp':     { media_type: 9,  content_type: 'image/webp',                                                                           label: 'WebP',     maxMB: 30 },
+  '.gif':      { media_type: 9,  content_type: 'image/gif',                                                                            label: 'GIF',      maxMB: 30 },
+  '.xmind':    { media_type: 14, content_type: 'application/x-xmind',                                                                  label: 'Xmind',    maxMB: 10 },
+  '.mp3':      { media_type: 15, content_type: 'audio/mpeg',                                                                           label: 'MP3',      maxMB: 200 },
+  '.m4a':      { media_type: 15, content_type: 'audio/x-m4a',                                                                          label: 'M4A',      maxMB: 200 },
+  '.wav':      { media_type: 15, content_type: 'audio/wav',                                                                            label: 'WAV',      maxMB: 200 },
+  '.aac':      { media_type: 15, content_type: 'audio/aac',                                                                            label: 'AAC',      maxMB: 200 },
+};
+
+const UNSUPPORTED_EXTS = ['.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.rmvb', '.3gp', '.ts'];
+const SUPPORTED_EXTS = Object.keys(PREFLIGHT_MAP);
+const MEDIA_TYPE_MAP = {1:'PDF', 2:'网页', 3:'Word', 4:'PPT', 5:'Excel', 6:'公众号', 7:'Markdown', 9:'图片', 11:'笔记', 12:'AI会话', 13:'TXT', 14:'Xmind', 15:'录音', 16:'视频'};
+
+let state = {
+  authMode: 'openapi',  // 'openapi' or 'bearer'
+  clientId: localStorage.getItem('ima_client_id') || '',
+  apiKey: localStorage.getItem('ima_api_key') || '',
+  token: localStorage.getItem('ima_token') || '',
+  kbList: [],
+  selectedKbId: '',
+  localDirHandle: null,
+  localFiles: {},
+  imaFiles: [],
+  diffItems: [],
+};
+
+// 初始化时自动填充已保存的凭证
+function initCredentials() {
+  if (state.clientId && state.apiKey) {
+    document.getElementById('client-id-input').value = state.clientId;
+    document.getElementById('api-key-input').value = state.apiKey;
+    state.authMode = 'openapi';
+    markStepDone(1);
+    log('已自动填充上次保存的 OpenAPI 认证信息', 'info');
+  } else if (state.token) {
+    document.getElementById('token-input').value = state.token;
+    state.authMode = 'bearer';
+    switchAuth('bearer');
+    markStepDone(1);
+    log('已自动填充上次保存的 Bearer Token', 'info');
+  }
+}
+
+function log(msg, type='info') {
+  const box = document.getElementById('log-box');
+  const card = document.getElementById('card-log');
+  card.style.display = '';
+  const line = document.createElement('div');
+  const time = new Date().toLocaleTimeString('zh', {hour12:false});
+  line.className = `log-${type}`;
+  line.textContent = `[${time}] ${msg}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── 认证切换 ──
+
+function switchAuth(mode) {
+  state.authMode = mode;
+  document.getElementById('tab-openapi').className = mode === 'openapi' ? 'auth-tab active' : 'auth-tab';
+  document.getElementById('tab-bearer').className = mode === 'bearer' ? 'auth-tab active' : 'auth-tab';
+  document.getElementById('panel-openapi').className = mode === 'openapi' ? 'auth-panel active' : 'auth-panel';
+  document.getElementById('panel-bearer').className = mode === 'bearer' ? 'auth-panel active' : 'auth-panel';
+}
+
+function toggleVis(inputId) {
+  const inp = document.getElementById(inputId);
+  const next = inp.type === 'password' ? 'text' : 'password';
+  inp.type = next;
+}
+
+function saveOpenAPI() {
+  const cid = document.getElementById('client-id-input').value.trim();
+  const akey = document.getElementById('api-key-input').value.trim();
+  if (!cid || !akey) { alert('请输入 Client ID 和 API Key'); return; }
+  state.clientId = cid;
+  state.apiKey = akey;
+  state.authMode = 'openapi';
+  localStorage.setItem('ima_client_id', cid);
+  localStorage.setItem('ima_api_key', akey);
+  localStorage.removeItem('ima_token');  // 清除旧的 token
+  markStepDone(1);
+  log(`OpenAPI 认证已保存（ClientID: ${cid.slice(0,8)}...）`, 'ok');
+  loadKbList();
+}
+
+function saveBearerToken() {
+  const v = document.getElementById('token-input').value.trim();
+  if (!v) { alert('请输入 Token'); return; }
+  state.token = v;
+  state.authMode = 'bearer';
+  localStorage.setItem('ima_token', v);
+  localStorage.removeItem('ima_client_id');  // 清除旧的 OpenAPI 信息
+  localStorage.removeItem('ima_api_key');
+  markStepDone(1);
+  log('Bearer Token 已保存', 'ok');
+  loadKbList();
+}
+
+function markStepDone(n) {
+  const badge = document.getElementById(`badge-${n}`);
+  badge.className = 'step-badge done';
+  badge.textContent = '\u2713';
+}
+
+// ── ima API（双模式） ──
+// OpenAPI: https://ima.qq.com/openapi/wiki/v1 + ima-openapi-clientid/imaa-openapi-apikey headers
+// Backend: https://ima.qq.com/backend/api/v1 + Authorization Bearer header
+
+async function openapiRequest(path, body={}) {
+  const url = IMA_OPENAPI_BASE + path;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'ima-openapi-clientid': state.clientId,
+      'ima-openapi-apikey': state.apiKey,
+      'User-Agent': 'WorkBuddy-ima-sync/2.0',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`OpenAPI HTTP ${resp.status}: ${text.slice(0,200)}`);
+  }
+  const json = await resp.json();
+  if (json.code !== 0) {
+    throw new Error(`OpenAPI 错误 [${json.code}]: ${json.msg || '未知错误'}`);
+  }
+  return json.data || json;
+}
+
+async function backendRequest(path, body={}) {
+  const url = IMA_BACKEND_BASE + path;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.token}`,
+      'User-Agent': 'WorkBuddy-ima-sync/2.0',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Backend HTTP ${resp.status}: ${text.slice(0,200)}`);
+  }
+  return resp.json();
+}
+
+async function loadKbList() {
+  const hasAuth = state.authMode === 'openapi' ? (state.clientId && state.apiKey) : state.token;
+  if (!hasAuth) { alert('请先配置认证'); return; }
+
+  const btn = document.getElementById('btn-load-kb');
+  btn.disabled = true; btn.textContent = '加载中...';
+  try {
+    let kbs = [];
+    if (state.authMode === 'openapi') {
+      // OpenAPI: 使用 search_knowledge_base 列出知识库
+      let cursor = '', isEnd = false;
+      do {
+        const data = await openapiRequest('/search_knowledge_base', { query: '', cursor, limit: 20 });
+        const list = data.info_list || [];
+        kbs.push(...list);
+        isEnd = data.is_end;
+        cursor = data.next_cursor || '';
+      } while (!isEnd && cursor);
+      // 映射到统一格式
+      kbs = kbs.map(kb => ({ id: kb.id, basic_info: { name: kb.name, knowledge_total_size: '?', size: '0' } }));
+    } else {
+      // Bearer: 使用 backend 端点
+      const data = await backendRequest('/knowledge_base/list', { limit: 50, type: 'KBT_MINE_KB' });
+      kbs = data.results?.[0]?.knowledge_base_list || [];
+    }
+
+    state.kbList = kbs;
+    const sel = document.getElementById('kb-select');
+    sel.innerHTML = '<option value="">-- 选择知识库 --</option>';
+    kbs.forEach(kb => {
+      const opt = document.createElement('option');
+      opt.value = kb.id;
+      opt.textContent = kb.basic_info.name;
+      sel.appendChild(opt);
+    });
+    log(`加载到 ${kbs.length} 个知识库`, 'ok');
+    markStepDone(2);
+  } catch(e) {
+    log('加载知识库失败: ' + e.message, 'err');
+    alert('加载失败: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '加载知识库';
+  }
+}
+
+function onKbChange() {
+  const sel = document.getElementById('kb-select');
+  state.selectedKbId = sel.value;
+  const kb = state.kbList.find(k => k.id === sel.value);
+  const meta = document.getElementById('kb-meta');
+  if (kb) {
+    meta.innerHTML = `
+      <div class="meta-item">文件数 <strong>${kb.basic_info.knowledge_total_size}</strong></div>
+      <div class="meta-item">总大小 <strong>${formatSize(parseInt(kb.basic_info.size||0))}</strong></div>
+    `;
+    checkDiffReady();
+  } else { meta.innerHTML = ''; }
+}
+
+async function selectLocalDir() {
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    state.localDirHandle = handle;
+    const files = await scanLocalDir(handle);
+    state.localFiles = files;
+    const count = Object.keys(files).length;
+    document.getElementById('dir-info').style.display = 'flex';
+    document.getElementById('dir-name-display').textContent = handle.name;
+    document.getElementById('dir-file-count').textContent = `${count} 个可同步文件`;
+    markStepDone(3);
+
+    // 预检警告
+    const warnBox = document.getElementById('preflight-warn-box');
+    const unsupported = [];
+    const oversized = [];
+    for (const [path, info] of Object.entries(files)) {
+      const ext = '.' + path.split('.').pop().toLowerCase();
+      if (UNSUPPORTED_EXTS.includes(ext)) unsupported.push(path);
+      const pf = PREFLIGHT_MAP[ext];
+      if (pf && info.size > pf.maxMB * 1024 * 1024) oversized.push(path);
+    }
+    if (unsupported.length || oversized.length) {
+      let warnText = '';
+      if (unsupported.length) warnText += `${unsupported.length} 个视频文件已自动跳过。`;
+      if (oversized.length) warnText += `${oversized.length} 个文件超过大小限制，上传时会失败。`;
+      warnBox.textContent = warnText;
+      warnBox.style.display = 'block';
+    } else {
+      warnBox.style.display = 'none';
+    }
+
+    log(`已选择目录 "${handle.name}"，扫描到 ${count} 个可同步文件`, 'ok');
+    checkDiffReady();
+  } catch(e) {
+    if (e.name !== 'AbortError') log('选择目录失败: ' + e.message, 'err');
+  }
+}
+
+async function scanLocalDir(dirHandle, prefix='') {
+  const result = {};
+  for await (const [name, handle] of dirHandle.entries()) {
+    const path = prefix ? `${prefix}/${name}` : name;
+    if (handle.kind === 'file') {
+      const ext = '.' + name.split('.').pop().toLowerCase();
+      // 跳过不支持的格式
+      if (UNSUPPORTED_EXTS.includes(ext)) continue;
+      if (!SUPPORTED_EXTS.includes(ext)) continue;
+      const file = await handle.getFile();
+      result[path] = { handle, name, path, size: file.size, lastModified: file.lastModified, file, ext };
+    } else if (handle.kind === 'directory') {
+      const sub = await scanLocalDir(handle, path);
+      Object.assign(result, sub);
+    }
+  }
+  return result;
+}
+
+function checkDiffReady() {
+  const hasAuth = state.authMode === 'openapi' ? (state.clientId && state.apiKey) : state.token;
+  const ready = hasAuth && state.selectedKbId && state.localDirHandle;
+  document.getElementById('btn-diff').disabled = !ready;
+}
+
+async function loadImaFiles(kbId) {
+  const files = [];
+  let cursor = '';
+  do {
+    let data;
+    if (state.authMode === 'openapi') {
+      data = await openapiRequest('/get_knowledge_list', { knowledge_base_id: kbId, limit: 50, cursor });
+      const list = data.knowledge_list || [];
+      files.push(...list);
+      cursor = data.next_cursor || '';
+      if (data.is_end) break;
+    } else {
+      data = await backendRequest('/knowledge/list', { knowledge_base_id: kbId, limit: 50, cursor, sort_type: 'UPDATE_TS_DESC_SORT_TYPE' });
+      const list = data.knowledge_list || [];
+      files.push(...list);
+      cursor = data.next_cursor || '';
+      if (data.is_end) break;
+    }
+  } while (cursor);
+  return files;
+}
+
+async function runDiff() {
+  if (!state.selectedKbId) { alert('请选择知识库'); return; }
+  if (!state.localDirHandle) { alert('请选择本地目录'); return; }
+
+  const card = document.getElementById('card-diff');
+  card.style.display = '';
+  document.getElementById('diff-progress-wrap').style.display = '';
+  document.getElementById('diff-tbody').innerHTML = '';
+  document.getElementById('diff-empty').style.display = 'none';
+  document.getElementById('quick-actions').style.display = 'none';
+  document.getElementById('diff-summary').innerHTML = '<span style="color:#888780;font-size:12px">对比中...</span>';
+  document.getElementById('diff-progress-bar').style.width = '20%';
+
+  // 显示认证方式
+  const authLabel = state.authMode === 'openapi' ? 'OpenAPI' : 'Bearer Token';
+  document.getElementById('auth-mode-label').textContent = `认证：${authLabel}`;
+
+  try {
+    log('开始加载 ima 文件列表（游标分页）...', 'info');
+    state.imaFiles = await loadImaFiles(state.selectedKbId);
+    log(`ima 共 ${state.imaFiles.length} 个文件`, 'ok');
+
+    document.getElementById('diff-progress-bar').style.width = '50%';
+
+    state.localFiles = await scanLocalDir(state.localDirHandle);
+    log(`本地共 ${Object.keys(state.localFiles).length} 个可同步文件`, 'ok');
+
+    document.getElementById('diff-progress-bar').style.width = '80%';
+
+    computeDiff();
+
+    document.getElementById('diff-progress-bar').style.width = '100%';
+    setTimeout(() => { document.getElementById('diff-progress-wrap').style.display = 'none'; }, 500);
+    markStepDone(4);
+    log('差异对比完成', 'ok');
+  } catch(e) {
+    log('对比失败: ' + e.message, 'err');
+    document.getElementById('diff-progress-wrap').style.display = 'none';
+    alert('对比失败: ' + e.message);
+  }
+}
+
+function extractFilename(title) {
+  if (!title) return '';
+  return title.replace(/\\/g, '/').split('/').pop();
+}
+
+function computeDiff() {
+  // 用纯文件名匹配（去路径前缀），不依赖时间戳
+  const imaMap = {};
+  state.imaFiles.forEach(f => {
+    const name = extractFilename(f.title) || f.media_id;
+    imaMap[name] = f;
+  });
+  const localMap = state.localFiles;
+  const items = [];
+
+  Object.keys(imaMap).forEach(name => {
+    const f = imaMap[name];
+    const local = localMap[name];
+    if (!local) {
+      items.push({ name, imaFile: f, localFile: null, status: 'missing', selected: true, preflightOk: true, oversized: false });
+    } else {
+      items.push({ name, imaFile: f, localFile: local, status: 'same', selected: false, preflightOk: true, oversized: false });
+    }
+  });
+
+  Object.keys(localMap).forEach(name => {
+    if (!imaMap[name]) {
+      const local = localMap[name];
+      const ext = name.split('.').pop().toLowerCase();
+      const pf = PREFLIGHT_MAP['.' + ext];
+      const preflightOk = pf !== undefined;
+      const oversized = pf && local.size > pf.maxMB * 1024 * 1024;
+      items.push({ name, imaFile: null, localFile: local, status: 'new', selected: true, preflightOk, oversized });
+    }
+  });
+
+  state.diffItems = items;
+  renderDiffTable(items);
+}
+
+const STATUS_LABEL = {
+  missing:  { label: '仅在 ima',  cls: 'tag-missing' },
+  new:      { label: '仅在本地',  cls: 'tag-new' },
+  modified: { label: '内容不同',  cls: 'tag-modified' },
+  same:     { label: '一致',      cls: 'tag-same' },
+};
+
+function renderDiffTable(items) {
+  const tbody = document.getElementById('diff-tbody');
+  tbody.innerHTML = '';
+  const counts = { missing:0, new:0, modified:0, same:0 };
+  items.forEach(item => counts[item.status]++);
+
+  const summary = document.getElementById('diff-summary');
+  summary.innerHTML = [
+    counts.new > 0 ? `<span class="tag tag-new">仅本地 ${counts.new}</span>` : '',
+    counts.missing > 0 ? `<span class="tag tag-missing">仅 ima ${counts.missing}</span>` : '',
+    counts.modified > 0 ? `<span class="tag tag-modified">不一致 ${counts.modified}</span>` : '',
+    counts.same > 0 ? `<span class="tag tag-same">一致 ${counts.same}</span>` : '',
+  ].join('');
+
+  const hasDiff = items.filter(i => i.status !== 'same').length > 0;
+  if (!hasDiff) document.getElementById('diff-empty').style.display = '';
+  document.getElementById('quick-actions').style.display = hasDiff ? 'flex' : 'none';
+  document.getElementById('btn-upload-all').style.display = counts.new > 0 ? '' : 'none';
+
+  items.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    const imaTime = item.imaFile ? new Date(parseInt(item.imaFile.create_time||0)).toLocaleString('zh', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+    const size = item.imaFile ? formatSize(parseInt(item.imaFile.file_size||0)) : (item.localFile ? formatSize(item.localFile.size) : '-');
+    const st = STATUS_LABEL[item.status];
+    const mediaType = item.imaFile ? getMediaTypeLabel(item.imaFile.media_type) : getExtLabel(item.name);
+
+    // 预检标记
+    let preflightHtml = '';
+    if (item.status === 'new') {
+      if (!item.preflightOk) {
+        preflightHtml = '<span class="tag tag-error">不支持</span>';
+      } else if (item.oversized) {
+        const ext = '.' + item.name.split('.').pop().toLowerCase();
+        const limit = PREFLIGHT_MAP[ext]?.maxMB || '?';
+        preflightHtml = `<span class="tag tag-warn">超限(${limit}MB)</span>`;
+      } else {
+        preflightHtml = '<span class="tag tag-same" style="font-size:10px">OK</span>';
+      }
+    }
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="select-check" data-idx="${idx}" ${item.selected ? 'checked' : ''} ${!item.preflightOk || item.oversized ? 'disabled' : ''} onchange="onItemCheck(${idx}, this.checked)"></td>
+      <td class="filename">${escHtml(item.name)}</td>
+      <td>${mediaType}</td>
+      <td class="filesize">${size}</td>
+      <td class="filetime">${imaTime}</td>
+      <td><span class="tag ${st.cls}">${st.label}</span></td>
+      <td>${preflightHtml}</td>
+      <td id="op-status-${idx}"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 快捷选择 ──
+
+function selectAllNew() {
+  state.diffItems.forEach((item, idx) => {
+    if (item.status === 'new' && item.preflightOk && !item.oversized) {
+      item.selected = true;
+      const cb = document.querySelector(`input[data-idx="${idx}"]`);
+      if (cb) cb.checked = true;
+    }
+  });
+}
+
+function selectAllModified() {
+  state.diffItems.forEach((item, idx) => {
+    if (item.status === 'modified') {
+      item.selected = true;
+      const cb = document.querySelector(`input[data-idx="${idx}"]`);
+      if (cb) cb.checked = true;
+    }
+  });
+}
+
+function selectNone() {
+  state.diffItems.forEach((item, idx) => {
+    item.selected = false;
+    const cb = document.querySelector(`input[data-idx="${idx}"]`);
+    if (cb) cb.checked = false;
+  });
+}
+
+function onItemCheck(idx, checked) { state.diffItems[idx].selected = checked; }
+
+function toggleAll() {
+  const all = document.getElementById('check-all').checked;
+  state.diffItems.forEach((item, idx) => {
+    item.selected = all && item.preflightOk && !item.oversized;
+    const cb = document.querySelector(`input[data-idx="${idx}"]`);
+    if (cb) cb.checked = item.selected;
+  });
+}
+
+// ── 上传下载 ──
+
+async function downloadSelected() {
+  const toDown = state.diffItems.filter(i => i.selected && (i.status === 'missing' || i.status === 'modified') && i.imaFile);
+  if (toDown.length === 0) { alert('没有可下载的选中项'); return; }
+
+  // 提示：ima API 仅返回文本内容，对 PDF/Word/图片等二进制文件无法下载原文件
+  const binaryItems = toDown.filter(i => {
+    const mt = i.imaFile.media_type;
+    return [1,3,4,5,8,14,17].includes(mt);  // PDF, Word, PPT, Excel, 图片, Xmind, 音频
+  });
+  if (binaryItems.length > 0) {
+    const textOnlyItems = toDown.filter(i => ![1,3,4,5,8,14,17].includes(i.imaFile.media_type));
+    const confirmed = confirm(
+      `${binaryItems.length} 个文件为二进制类型（PDF/Word/PPT/图片等），\nima API 只能下载其文本内容，无法获取原始文件。\n\n只有 ${textOnlyItems.length} 个文本类型文件可以完整下载。\n\n是否继续？`
+    );
+    if (!confirmed) return;
+  }
+
+  log(`开始下载 ${toDown.length} 个文件...`, 'info');
+  for (const item of toDown) {
+    setOpStatus(item, 'uploading', '下载中...');
+    try {
+      const content = await fetchImaContent(item.imaFile);
+      await writeLocalFile(state.localDirHandle, item.name, content);
+      setOpStatus(item, 'done', '已下载');
+      log(`下载完成: ${item.name}`, 'ok');
+    } catch(e) {
+      setOpStatus(item, 'error', '失败');
+      log(`下载失败 ${item.name}: ${e.message}`, 'err');
+    }
+  }
+  state.localFiles = await scanLocalDir(state.localDirHandle);
+  log('下载完成', 'ok');
+}
+
+async function uploadSelected() {
+  const toUp = state.diffItems.filter(i => i.selected && (i.status === 'new' || i.status === 'modified') && i.localFile && i.preflightOk && !i.oversized);
+  if (toUp.length === 0) { alert('没有可上传的选中项'); return; }
+  log(`开始上传 ${toUp.length} 个文件...`, 'info');
+  for (const item of toUp) {
+    setOpStatus(item, 'uploading', '上传中...');
+    try {
+      await uploadFileToIma(item.localFile, state.selectedKbId);
+      setOpStatus(item, 'done', '已上传');
+      log(`上传完成: ${item.name}`, 'ok');
+    } catch(e) {
+      setOpStatus(item, 'error', '失败');
+      log(`上传失败 ${item.name}: ${e.message}`, 'err');
+    }
+  }
+  log('上传完成，建议重新对比', 'ok');
+}
+
+async function uploadAllNew() {
+  // 一键选中并上传所有"仅在本地"且预检通过的文件
+  const newItems = state.diffItems.filter(i => i.status === 'new' && i.preflightOk && !i.oversized);
+  if (newItems.length === 0) { alert('没有可上传的新文件'); return; }
+
+  // 确认对话框：显示将要上传的文件列表
+  const fileList = newItems.map(i => '  - ' + i.name).join('\n');
+  const confirmed = confirm(`即将上传 ${newItems.length} 个新文件到 ima 知识库：\n\n${fileList}\n\n确认上传吗？`);
+  if (!confirmed) { log('取消一键上传', 'info'); return; }
+
+  log(`一键上传 ${newItems.length} 个新文件...`, 'info');
+  for (const item of newItems) {
+    item.selected = true;
+    setOpStatus(item, 'uploading', '上传中...');
+    try {
+      await uploadFileToIma(item.localFile, state.selectedKbId);
+      setOpStatus(item, 'done', '已上传');
+      log(`上传完成: ${item.name}`, 'ok');
+    } catch(e) {
+      setOpStatus(item, 'error', '失败');
+      log(`上传失败 ${item.name}: ${e.message}`, 'err');
+    }
+  }
+  log('一键上传完成，建议重新对比', 'ok');
+}
+
+function setOpStatus(item, type, label) {
+  const idx = state.diffItems.indexOf(item);
+  const cell = document.getElementById(`op-status-${idx}`);
+  if (cell) cell.innerHTML = `<span class="tag tag-${type}">${label}</span>`;
+}
+
+async function fetchImaContent(imaFile) {
+  if (state.authMode === 'openapi') {
+    // OpenAPI: 先获取媒体访问信息
+    const info = await openapiRequest('/get_media_info', { media_id: imaFile.media_id });
+    if (info.url_info?.url) {
+      const resp = await fetch(info.url_info.url, { headers: info.url_info.headers || {} });
+      const blob = await resp.blob();
+      return blob;
+    }
+    // 无法访问，返回元信息文本
+    const text = JSON.stringify({ media_id: imaFile.media_id, title: imaFile.title, note: '请在 ima 客户端查看原文' }, null, 2);
+    return new TextEncoder().encode(text);
+  } else {
+    const data = await backendRequest('/knowledge/fetch_content', { media_id: imaFile.media_id });
+    const text = data.content || data.text || JSON.stringify(data, null, 2);
+    return new TextEncoder().encode(text);
+  }
+}
+
+async function writeLocalFile(dirHandle, filename, content) {
+  const parts = filename.split('/');
+  let current = dirHandle;
+  for (let i = 0; i < parts.length - 1; i++) {
+    current = await current.getDirectoryHandle(parts[i], { create: true });
+  }
+  const fileHandle = await current.getFileHandle(parts[parts.length - 1], { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(content);
+  await writable.close();
+}
+
+async function uploadFileToIma(localFile, kbId) {
+  const file = await localFile.handle.getFile();
+  const ext = '.' + localFile.name.split('.').pop().toLowerCase();
+  const pf = PREFLIGHT_MAP[ext];
+  if (!pf) throw new Error(`不支持的文件类型: ${ext}`);
+  if (file.size > pf.maxMB * 1024 * 1024) throw new Error(`文件超限: ${localFile.name} (${(file.size/1024/1024).toFixed(1)}MB > ${pf.maxMB}MB)`);
+
+  if (state.authMode === 'openapi') {
+    // OpenAPI 三步上传流程（与 API 文档一致）
+    // Step 1: create_media → 获取 media_id + COS 凭证
+    const fileExt = ext.slice(1); // 去掉点号
+    const createResp = await openapiRequest('/create_media', {
+      file_name: localFile.name,
+      file_size: file.size,
+      content_type: pf.content_type,
+      knowledge_base_id: kbId,
+      file_ext: fileExt,
+    });
+
+    const mediaId = createResp.media_id;
+    const cosCred = createResp.cos_credential;
+    if (!mediaId || !cosCred) throw new Error('create_media 返回缺少 media_id 或 cos_credential');
+
+    // Step 2: COS PUT 直传
+    const bucket = cosCred.bucket_name;
+    const region = cosCred.region;
+    const cosKey = cosCred.cos_key;
+    const tmpSecretId = cosCred.secret_id;
+    const tmpSecretKey = cosCred.secret_key;
+    const sessionToken = cosCred.token;
+    const startTime = String(cosCred.start_time || '');
+    const expiredTime = String(cosCred.expired_time || '');
+
+    if (!bucket || !region || !cosKey || !tmpSecretId || !tmpSecretKey) {
+      throw new Error('COS 凭证不完整');
+    }
+
+    const cosUrl = `https://${bucket}.cos.${region}.myqcloud.com/${cosKey}`;
+    const authorization = await buildCosAuth(tmpSecretId, tmpSecretKey, cosKey, startTime, expiredTime, bucket, region);
+
+    const uploadResp = await fetch(cosUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Authorization': authorization,
+        'x-cos-security-token': sessionToken || '',
+        'Host': `${bucket}.cos.${region}.myqcloud.com`,
+        'Content-Type': 'application/octet-stream',
+      },
+    });
+    if (!uploadResp.ok) throw new Error(`COS 上传失败: HTTP ${uploadResp.status}`);
+
+    // Step 3: add_knowledge → 注册到知识库
+    await openapiRequest('/add_knowledge', {
+      media_type: pf.media_type,
+      media_id: mediaId,
+      title: localFile.name,
+      knowledge_base_id: kbId,
+      file_info: {
+        cos_key: cosKey,
+        file_size: file.size,
+        last_modify_time: Math.floor(file.lastModified / 1000),
+        password: '',
+        file_name: localFile.name,
+      },
+    });
+    return;
+  }
+
+  // Bearer Token 模式：使用 backend 端点
+  const initResp = await backendRequest('/knowledge/create_media', {
+    knowledge_base_id: kbId,
+    file_name: localFile.name,
+    file_size: file.size,
+    media_type: pf.media_type,
+  });
+  const mediaId = initResp.media_id;
+  const cosInfo = initResp.upload_credential || initResp.cos_credential;
+
+  if (cosInfo && cosInfo.bucket && cosInfo.region && cosInfo.object_key && cosInfo.tmp_secret_id) {
+    const cosUrl = `https://${cosInfo.bucket}.cos.${cosInfo.region}.myqcloud.com/${cosInfo.object_key || cosInfo.path}`;
+    const authorization = await buildCosAuth(
+      cosInfo.tmp_secret_id || cosInfo.secret_id,
+      cosInfo.tmp_secret_key || cosInfo.secret_key,
+      cosInfo.object_key || cosInfo.path || '',
+      String(cosInfo.start_time || ''),
+      String(cosInfo.expired_time || ''),
+      cosInfo.bucket,
+      cosInfo.region
+    );
+    const uploadResp = await fetch(cosUrl, {
+      method: 'PUT', body: file,
+      headers: {
+        'Authorization': authorization,
+        'x-cos-security-token': cosInfo.session_token || cosInfo.token || '',
+        'Content-Type': 'application/octet-stream',
+      },
+    });
+    if (!uploadResp.ok) throw new Error(`COS 上传失败: ${uploadResp.status}`);
+
+    if (mediaId) {
+      await backendRequest('/knowledge/add_knowledge', { knowledge_base_id: kbId, media_id: mediaId, title: localFile.name }).catch(() => {});
+    }
+    return;
+  }
+
+  // 最终退路：upload_url
+  const uploadUrlResp = await backendRequest('/knowledge/upload_url', {
+    knowledge_base_id: kbId, file_name: localFile.name, file_size: file.size
+  });
+  const uploadUrl = uploadUrlResp.upload_url || uploadUrlResp.url;
+  if (!uploadUrl) throw new Error('未获取到上传链接');
+
+  const uploadResp = await fetch(uploadUrl, {
+    method: 'PUT', body: file,
+    headers: { 'Content-Type': file.type || 'application/octet-stream' }
+  });
+  if (!uploadResp.ok) throw new Error(`上传失败: ${uploadResp.status}`);
+  if (mediaId || uploadUrlResp.media_id) {
+    const mid = mediaId || uploadUrlResp.media_id;
+    await backendRequest('/knowledge/upload_complete', { knowledge_base_id: kbId, media_id: mid }).catch(() => {});
+  }
+}
+
+// COS HMAC-SHA1 签名（使用 Web Crypto API）
+async function buildCosAuth(secretId, secretKey, objectKey, startTime, expiredTime, bucket, region) {
+  const keyTime = `${startTime};${expiredTime}`;
+
+  // SignKey = HMAC-SHA1(SecretKey, KeyTime)
+  const signKey = await hmacSha1Hex(secretKey, keyTime);
+
+  // HttpString = PUT\n/ObjectKey\n\nHost=Bucket.cos.Region.myqcloud.com\n
+  const host = `${bucket}.cos.${region}.myqcloud.com`;
+  const httpString = `put\n/${objectKey}\n\nhost=${host}\n`;
+
+  // StringToSign = sha1\nKeyTime\nSHA1(HttpString)\n
+  const sha1Http = await sha1Hex(httpString);
+  const stringToSign = `sha1\n${keyTime}\n${sha1Http}\n`;
+
+  // Signature = HMAC-SHA1(SignKey, StringToSign)
+  const signature = await hmacSha1Hex(signKey, stringToSign);
+
+  return `q-sign-algorithm=sha1&q-ak=${secretId}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`;
+}
+
+// HMAC-SHA1 → hex
+async function hmacSha1Hex(key, message) {
+  const keyBytes = typeof key === 'string' ? new TextEncoder().encode(key) : key;
+  const msgBytes = new TextEncoder().encode(message);
+  const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, msgBytes);
+  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// SHA1 → hex
+async function sha1Hex(message) {
+  const msgBytes = new TextEncoder().encode(message);
+  const hash = await crypto.subtle.digest('SHA-1', msgBytes);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function formatSize(bytes) {
+  if (!bytes || bytes === 0) return '-';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function getMediaTypeLabel(type) {
+  return `<span style="color:#888780">${MEDIA_TYPE_MAP[type] || '文件'}</span>`;
+}
+
+function getExtLabel(name) {
+  const ext = name.split('.').pop().toUpperCase();
+  return `<span style="color:#888780">${ext || '?'}</span>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// 页面初始化：自动填充已保存的凭证 + 兼容性检测
+(function initPage() {
+  // 检测 File System Access API 支持
+  if (!('showDirectoryPicker' in window)) {
+    document.getElementById('compat-warning').style.display = '';
+    document.getElementById('btn-select-dir').disabled = true;
+    document.getElementById('btn-select-dir').textContent = '浏览器不支持';
+    log('当前浏览器不支持 File System Access API，请使用 Chrome 127+ 或 Edge 127+', 'err');
+  }
+  // 自动填充凭证
+  initCredentials();
+})();
+</script>
+</body>
+</html>
