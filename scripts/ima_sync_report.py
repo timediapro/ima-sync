@@ -40,6 +40,8 @@ import datetime
 import pathlib
 import html as html_mod
 import time
+import socket
+import http.client
 
 # ──────────────────────────────────────────────
 # 配置
@@ -148,6 +150,55 @@ class AuthInfo:
 
 
 # ──────────────────────────────────────────────
+# 网络重试机制（v2.0.3）
+# ──────────────────────────────────────────────
+
+MAX_RETRIES = 2
+RETRY_DELAYS = [1, 3]  # 秒，递增
+
+RETRYABLE_ERRORS = (
+    urllib.error.URLError,
+    socket.timeout,
+    TimeoutError,
+    ConnectionResetError,
+    ConnectionAbortedError,
+)
+
+
+def _is_retryable(error: Exception) -> bool:
+    """判断是否为可重试的网络错误"""
+    if isinstance(error, RETRYABLE_ERRORS):
+        return True
+    if isinstance(error, urllib.error.HTTPError):
+        # 5xx 服务端错误可重试，4xx 客户端错误不重试
+        return error.code >= 500
+    # SSL 错误可重试（可能是临时网络问题）
+    if isinstance(error, OSError) and "SSL" in str(error):
+        return True
+    return False
+
+
+def _http_request_with_retry(method: str, url: str, data: bytes = None,
+                              headers: dict = None, timeout: int = 30,
+                              label: str = "") -> http.client.HTTPResponse:
+    """发送 HTTP 请求，网络错误自动重试"""
+    last_error = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
+            return urllib.request.urlopen(req, timeout=timeout)
+        except Exception as e:
+            last_error = e
+            if not _is_retryable(e) or attempt >= MAX_RETRIES:
+                raise
+            delay = RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)]
+            prefix = f"[{label}] " if label else ""
+            print(f"  {prefix}网络错误，{delay}s 后重试（{attempt + 1}/{MAX_RETRIES}）: {e}", file=sys.stderr)
+            time.sleep(delay)
+    raise last_error
+
+
+# ──────────────────────────────────────────────
 # ima API 请求
 # ──────────────────────────────────────────────
 
@@ -156,10 +207,8 @@ def ima_post(path: str, payload: dict, auth: AuthInfo) -> dict:
     url = IMA_BASE + path
     data = json.dumps(payload).encode("utf-8")
     headers = auth.headers()
-    req = urllib.request.Request(
-        url, data=data, headers=headers, method="POST"
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with _http_request_with_retry("POST", url, data=data, headers=headers,
+                                   timeout=30, label="ima") as resp:
         body = json.loads(resp.read().decode("utf-8"))
     code = body.get("code", -1)
     if code != 0:
@@ -286,8 +335,9 @@ def upload_file_to_ima(file_path: str, kb_id: str, auth: AuthInfo) -> dict:
     with open(file_path, "rb") as f:
         file_data = f.read()
 
-    upload_req = urllib.request.Request(cos_url, data=file_data, headers=upload_headers, method="PUT")
-    with urllib.request.urlopen(upload_req, timeout=120) as upload_resp:
+    with _http_request_with_retry("PUT", cos_url, data=file_data,
+                                   headers=upload_headers, timeout=120,
+                                   label="COS") as upload_resp:
         if upload_resp.status >= 300:
             raise ValueError(f"COS 上传失败：HTTP {upload_resp.status}")
 

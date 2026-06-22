@@ -2,19 +2,20 @@
 name: ima-sync
 slug: ima-sync
 displayName: ima 知识库同步工具
-version: "2.0.2"
+version: "2.0.3"
 description: >
   ima 知识库与本地文件夹的同步工具——零依赖、浏览器打开即用。
   支持双向差异对比、增量同步上传、可视化 HTML 报告、文件预检过滤。
   三种使用形态：纯前端可视化工具（Chrome/Edge 打开即用，无需安装）、
   Python 命令行脚本（纯 stdlib 零外部依赖）、WorkBuddy 定时自动化。
   21 种文件格式支持，COS 直传 + OpenAPI 双认证，上传更稳定。
-  v2.0.1: 修复 create_media 字段名、add_knowledge 缺失参数、media_type 枚举、COS 签名等 7 处 API 对接问题。
+  v2.0.2: 修复 diff 对比逻辑，纯文件名匹配 + sync_state 驱动，避免重复上传。
+  v2.0.3: 新增网络重试机制、FAQ 排障指南、首次配置引导。
 category: tools
 agent_created: true
 ---
 
-# ima 知识库同步工具（v2.0.2）
+# ima 知识库同步工具（v2.0.3）
 
 ## 概述
 
@@ -65,9 +66,39 @@ ima-sync/
 │   └── ima_sync_report.py  Python 同步脚本（v2.0：增量+预检+多模式）
 │   └── reports/            报告输出目录（保留最近 30 份）
 │   └── sync_state.json     增量同步状态文件
+└── docs/
+    ├── 使用说明.md           详细使用文档
+    └── FAQ.md              常见问题排障指南
 └── references/
     └── api_reference.md   ima API 接口参考（含 OpenAPI 和 COS 直传）
 ```
+
+## 首次配置
+
+只需要做一次，2 分钟搞定。
+
+### 获取 OpenAPI 凭证
+
+1. 浏览器打开 **https://ima.qq.com/agent-interface**
+2. 登录你的 QQ/微信账号
+3. 页面直接显示 **Client ID** 和 **API Key**
+4. 复制保存（敏感凭证，不要分享给他人）
+
+### 配置环境变量
+
+**命令行（推荐）**：
+```bash
+export IMA_OPENAPI_CLIENTID="你的ClientID"
+export IMA_OPENAPI_APIKEY="你的APIKey"
+```
+
+**可视化工具**：打开 `assets/index.html`，在 Step 1 的输入框里粘贴即可，无需环境变量。
+
+> 如果不想用环境变量，也可以用 `--client-id` 和 `--api-key` 参数每次传入，但不推荐（敏感信息会出现在命令行历史里）。
+
+### 获取知识库 ID
+
+从 ima 桌面端或网页端打开目标知识库，URL 中 `knowledgeBaseId=` 后面的字符串就是知识库 ID。
 
 ## 使用方式
 
@@ -164,5 +195,6 @@ OpenAPI 认证模式仅走 COS 直传流程（无退路接口）。
 ## 参考资料
 
 - API 接口详情：`references/api_reference.md`（含 OpenAPI 认证和 COS 直传）
+- 常见问题排障：`docs/FAQ.md`（上传/认证/格式/浏览器兼容性等）
 - GitHub 参考：cj0103/ima-sync-skill（增量同步 + COS 直传 + 预检）
 - ima 官方文档：https://ima.qq.com

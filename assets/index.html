@@ -203,8 +203,26 @@
   <div class="header">
     <div class="logo">i</div>
     <div>
-      <h1>ima 知识库同步工具 v2.0.1</h1>
+      <h1>ima 知识库同步工具 v2.0.3</h1>
       <p>对比本地目录与 ima 知识库，支持双向同步</p>
+    </div>
+  </div>
+
+  <!-- Step 0: 首次使用引导 -->
+  <div class="card" id="card-guide" style="border-left:3px solid #185FA5;background:#F0F6FD">
+    <div class="card-title" style="color:#185FA5;cursor:pointer" onclick="document.getElementById('guide-content').style.display = document.getElementById('guide-content').style.display === 'none' ? 'block' : 'none'">
+      <span class="step-badge" style="background:#185FA5;color:#fff">?</span>
+      首次使用引导（点击展开）
+      <span id="guide-toggle" style="font-size:11px;color:#888780;margin-left:8px">▼</span>
+    </div>
+    <div id="guide-content" style="display:none;font-size:12px;color:#444441;line-height:1.8;margin-top:8px">
+      <p><strong>只需要做一次，2 分钟搞定：</strong></p>
+      <p>1. 打开 <a href="https://ima.qq.com/agent-interface" target="_blank" style="color:#185FA5">ima.qq.com/agent-interface</a>，登录后直接看到 <b>Client ID</b> 和 <b>API Key</b></p>
+      <p>2. 复制凭证，粘贴到下方 Step 1 的输入框，点击"保存"</p>
+      <p>3. 点击 Step 2 的"加载知识库"，选择你要同步的知识库</p>
+      <p>4. 点击 Step 3 的"选择目录"，选你电脑上的文件夹</p>
+      <p>5. 点击 Step 4 的"开始对比"，查看差异 → 上传</p>
+      <p style="color:#888780;margin-top:4px">🧑‍💻 命令行用户看这里：<code style="background:#E6F1FB;padding:1px 5px;border-radius:3px">export IMA_OPENAPI_CLIENTID="xxx" && export IMA_OPENAPI_APIKEY="xxx"</code>，然后运行 Python 脚本即可。</p>
     </div>
   </div>
 
