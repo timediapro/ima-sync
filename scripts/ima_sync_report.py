@@ -385,7 +385,7 @@ def scan_local(root: str) -> dict[str, dict]:
             result[rel] = {
                 "path": str(p),
                 "size": stat.st_size,
-                "mtime": int(stat.st_mtime * 1000),
+                "mtime": int(round(stat.st_mtime * 1000)),
                 "ext": ext,
                 "preflight": PREFLIGHT_MAP.get(ext),
             }
@@ -405,7 +405,7 @@ def scan_all_local(root: str) -> dict[str, dict]:
             result[rel] = {
                 "path": str(p),
                 "size": stat.st_size,
-                "mtime": int(stat.st_mtime * 1000),
+                "mtime": int(round(stat.st_mtime * 1000)),
                 "ext": p.suffix.lower(),
                 "supported": p.suffix.lower() in SUPPORTED_EXTS,
                 "oversized": False,
@@ -493,7 +493,10 @@ def compute_diff(ima_files: list[dict], local_files: dict, sync_state: dict, ful
             local_mtime = local["mtime"]
             local_size = local["size"]
 
-            if state_entry.get("size") == local_size and state_entry.get("mtime") == local_mtime:
+            # size 精确比对；mtime 允许 ±999ms 容差（浮点精度 + 文件系统粒度）
+            size_match = state_entry.get("size") == local_size
+            mtime_match = abs(state_entry.get("mtime", 0) - local_mtime) < 1000
+            if size_match and mtime_match:
                 status = "same"
             else:
                 # 本地文件与上次同步时不同（或没有记录）→ 需要重新上传
